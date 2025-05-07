@@ -139,11 +139,12 @@ end
 fig = Figure()
 ax1 = Axis(fig[1,1], xscale = log10)
 
-function rzi_lut(; x1=1.4e-3, x2=1e7, num=5000)
+lut_lim = [1.4e-3, 1e7]
+
+function rzi_lut(; lut_lim=lut_lim, num=5000)
     # function returns look-up tables for values of the Incomplete Riemann-Zeta integral for orders p=1,2,3,4
-    # x1 is the lower bound of the integration domain
-    # x2 is the upper bound of the integration domain
-    # n is the number of logarithmically-spaced points in the integration domain
+    # lut_lim is a 2-element array of the lower and upper bounds of the look-up table domain
+    # n is the number of logarithmically-spaced points in the look-up table domain
 
     p_range = 1:4 # range of orders of the integral
 
@@ -173,9 +174,6 @@ function rzi_lut(; x1=1.4e-3, x2=1e7, num=5000)
     
 end
 
-
-
-# 
 
 function lower_bound(x, p)
     # function returns the lower bound approximation of the Incomplete Riemann-Zeta integral
@@ -216,19 +214,19 @@ luts = rzi_lut()
 
 # println(lut[end,2]-pi^4/15)
 
-function rzi(x1, x2, p, luts)
+function rzi(x1, x2, p, luts; lut_lim=[1.4e-3, 1e7])
     # function returns the value of the Incomplete Riemann-Zeta integral
     # x1 is the lower bound of the integration domain
     # x2 is the upper bound of the integration domain
+    # lut_lim is a 2-element array of the lower and upper bounds of the look-up table domain
     # p is the order of the integral
     # lut is the look-up tables for the Incomplete Riemann-Zeta integral created by the rzi_lut function
 
+    x_low = lut_lim[1] # lower bound of the integration domain
+    x_high = lut_lim[2] # upper bound of the integration domain
+
     # select the appropriate look-up table for the order of the integral
     lut = luts[p]
-
-    # get integration domain limit
-    x_low = lut[1]
-    x_high = lut[end,1]
 
     # create variable to hold the value of the integral
     integral_val = 0
@@ -273,18 +271,19 @@ lut = luts[1]
 
 # define x1 and x2 for the Bose-Einstein integral
 x1 = k*T/((e_b - mu))
-println(x1)
 # x1 = 0
 x2 = k*T/((e_a - mu))
 
-function bei(; x1, x2, mu, T, luts)
+function bei(; x1, x2, mu, T, luts, order)
     # function returns the value of the Bose-Einstein distribution integral
     # x1 is kT/(qe*(e_b - mu))
     # x2 is kT/(qe*(e_a - mu))
     # e_b is the upper bound of the integration
     # mu is the chemical potential
     # T is the temperature in K
-    # lut is the look-up table for the Incomplete Riemann-Zeta integral created by the rzi_lut function
+    # luts is a 4 x 1 array with the look-up tables for the Incomplete Riemann-Zeta integral 
+    # created by the rzi_lut function
+    # order is the order of the integral, order = 2 for particle flux, order = 3 for energy flux
 
     # define constants
     k = 1.380649e-23 # Boltzmann's constant
@@ -295,12 +294,21 @@ function bei(; x1, x2, mu, T, luts)
     # define prefactor
     prefactor = (2*pi*k*T)/(h^3*c^2)
 
-    # define the values for the Bose-Einstein integral from the Riemann zeta integral for the (p-1)th order
-    rzi0 = mu^3 * rzi(x1, x2, 1, luts)
-    rzi1 = 3*k*T*mu^2 * rzi(x1, x2, 2, luts)
-    rzi2 = 3*(k*T)^2*mu * rzi(x1, x2, 3, luts)
-    rzi3 = (k*T)^3 * rzi(x1, x2, 4, luts)
-
+    # define the values for the Bose-Einstein integral from the Riemann zeta integrals for different orders
+    if order == 2
+        # particle flux
+        rzi0 = mu^2 * rzi(x1, x2, 1, luts)
+        rzi1 = 2*k*T*mu * rzi(x1, x2, 2, luts)
+        rzi2 = (k*T)^2 * rzi(x1, x2, 3, luts)
+        rzi3 = 0
+    elseif order == 3
+        # energy flux
+        rzi0 = mu^3 * rzi(x1, x2, 1, luts)
+        rzi1 = 3*k*T*mu^2 * rzi(x1, x2, 2, luts)
+        rzi2 = 3*(k*T)^2*mu * rzi(x1, x2, 3, luts)
+        rzi3 = (k*T)^3 * rzi(x1, x2, 4, luts)
+    end
+    
     # calculate Bose-Einstein integral from Riemann zeta integral
     bei_val = prefactor * (rzi0 + rzi1 + rzi2 + rzi3)
 
@@ -308,7 +316,7 @@ function bei(; x1, x2, mu, T, luts)
 
 end
 
-bei_val = bei(x1=x1, x2=x2, mu=0, T=T, luts=luts)
+bei_val = bei(x1=x1, x2=x2, mu=0, T=T, luts=luts, order=3)
 
 display(fig)
 
