@@ -1,120 +1,5 @@
 using Pkg, CSV, DataFrames, GLMakie, Trapz, Interpolations
 
-
-
-# function detailed_balance(spectrum_file, Eg)
-
-#     # load the spectrum
-#     spectrum = CSV.read(spectrum_file, DataFrame)
-
-#     # wavelengths in m
-#     wl = spectrum[:, 1]/1e6
-#     # irradiance in W m^-3
-#     irad = spectrum[:, 2]*1e6
-
-#     # plot wavelength vs irradiance to check its ok
-#     fig = Figure()
-#     ax1 = Axis(fig[1, 1], limits = (0, 4e-6, nothing, nothing))
-#     lines!(ax1, wl, irad)
-
-#     # Get total power
-#     p_max = trapz(wl, irad)  
-
-#     # define constants
-#     k = 1.380649e-23 # Boltzmann's constant
-#     h = 6.62607015e-34 # Planck's constant
-#     c = 299792458 # Speed of light
-#     qe = 1.602176634e-19 # Electron charge
-
-#     # Planckian effective temperature
-#     T_ev = (h*c)./ (wl*k.*log.((2*h*pi*c^2)./(irad.*wl.^5) .+ 1))
-
-#     # plot temp to make sure it's ok
-#     ax2 = Axis(fig[1, 2], limits = (0, 4e-6, nothing, nothing))
-#     lines!(ax2, wl, T_ev)
-
-
-
-#     # Absorbed photon flux
-
-#     # Photon flux in sunlight that has energy above bandgap
-#     pflux = (2*pi/(h^3*c^2)) .* E.^2 ./ (exp.(E./(k.*T_ev)) .-1)
-
-#     # flip pflux and photon energy array from left to right so they can be integrated correctly
-#     pflux = reverse(pflux)
-#     E = reverse(E)
-
-#     ax3 = Axis(fig[1,3])
-#     lines!(ax3, E/qe, pflux)
-
-#     # integrate from bandgap to infinity 
-#     # TODO replace with IRZI method
-
-#     # energy in eV
-#     E_eV = E/qe
- 
-#     # cumulative integrated absorbed photon flux
-#     ca_flux = cumtrap_int(E, pflux)
-
-#     ax4 = Axis(fig[1,4])
-#     lines!(ax4, E/qe, ca_flux)
-
-#     # get integrated photon flux from bandgap to infinity
-#     a_flux = ca_flux[end] .- ca_flux
-
-#     ax4 = Axis(fig[1,5])
-#     lines!(ax4, E/qe, a_flux)
-
-    
-#     # Emitted photon flux
-
-#     # Create the emitted flux array
-#     e_flux = Inf*ones(length(E))
-
-#     for i in eachindex(E)
-
-#         # all voltages up to the current photon energy
-#         V = 0:0.01:E[i]
-
-#         # iterate through voltages to get emitted flux values for each bandgap and cell voltages
-#     end
-    
-#     # create tuple holding outputs
-#     outputs = (a_flux, E)
-
-#     return outputs, fig
-
-# end
-
-
-
-# val_check, figure = detailed_balance("am0.csv", 0.1:0.001:3)
-
-function integrand(x, p)
-    # function computes the value of the Riemann zeta integrand for a given value of x and order p
-    val = 1/(x^(p+1)*(exp(1/x)-1))
-
-    return val
-end
-
-x = exp10.(range(-3,7,5000))
-
-
-# trapezoidal integration function
-function trap_int(x,y)
-
-    val = 0
-
-    for i in eachindex(x)        
-        if i != 1
-            val = val + (x[i] - x[i-1])*(y[i] + y[i-1])/2
-        end
-    end
-
-    return val
-end
-
-
 function cumtrapz_int(x,y)
     # cumulative trapezoidal integration
     # input: 
@@ -136,15 +21,10 @@ function cumtrapz_int(x,y)
     return Float64.(val)
 end
 
-# fig = Figure()
-# ax1 = Axis(fig[1,1], xscale = log10)
-
-# lut_lim = [1.4e-3, 1e7]
-
 function rzi_lut(; lut_lim=[1.4e-3, 1e7], num=5000)
     # function returns look-up tables for values of the Incomplete Riemann-Zeta integral for orders p=1,2,3,4
     # lut_lim is a 2-element array of the lower and upper bounds of the look-up table domain
-    # n is the number of logarithmically-spaced points in the look-up table domain
+    # num is the number of logarithmically-spaced points in the look-up table domain
 
     x1, x2 = lut_lim # lower and upper bounds of the integration domain
 
@@ -161,12 +41,13 @@ function rzi_lut(; lut_lim=[1.4e-3, 1e7], num=5000)
         integrand = 1 ./(x.^(p+1).*(exp.(1 ./x).-1))
 
         # cumulative trapezoidal integration of all the values of the integrand
-        val = cumtrap_int(x, integrand)
+        val = cumtrapz_int(x, integrand)
         
         # return lookup table as interpolations function 
+        lut = linear_interpolation(x, val, extrapolation_bc=Flat())
 
         # TODO: see if this is the fastest way
-        push!(luts, linear_interpolation(x, val))
+        push!(luts, lut)
 
         # lines!(ax1, x, val)
 
@@ -176,8 +57,7 @@ function rzi_lut(; lut_lim=[1.4e-3, 1e7], num=5000)
     
 end
 
-
-function lower_bound(x, p)
+function rzi_lower_bound(x, p)
     # function returns the lower bound approximation of the Incomplete Riemann-Zeta integral
     # x is the lower bound of the integration domain
     # p is the order of the integral
@@ -194,23 +74,10 @@ function lower_bound(x, p)
     return val
 end
 
-upper_bound(x, p) = -x^(1-p)/(1-p)
-
-# # define constants
-# k = 1.380649e-23 # Boltzmann's constant
-# h = 6.62607015e-34 # Planck's constant
-# c = 299792458 # Speed of light
-# qe = 1.602176634e-19 # Electron charge
-
-# T = 300
-# e_b = 3*qe # upper bound of the integration domain
-# e_a = 0.1*qe # lower bound of the integration domain
-# mu = 0
-
-# # construct lookup tables for the Incomplete Riemann-Zeta integral for orders p=1,2,3,4
-luts = rzi_lut(lut_lim=[1.4e-3, 1e7])
-
-# println(lut[end,2]-pi^4/15)
+# function returns the upper bound approximation of the Incomplete Riemann-Zeta integral
+# x is the upper bound of the integration domain
+# p is the order of the integral
+rzi_upper_bound(x, p) = -x^(1-p)/(1-p)
 
 function rzi(x1, x2, p, luts; lut_lim=[1.4e-3, 1e7])
     # function returns the value of the Incomplete Riemann-Zeta integral
@@ -237,9 +104,9 @@ function rzi(x1, x2, p, luts; lut_lim=[1.4e-3, 1e7])
         # check if x1 is 0
         if x1 == 0
             # don't include x1 as 0 val will lead to NaN
-            integral_val += lower_bound(x_low, p)
+            integral_val += rzi_lower_bound(x_low, p)
         else
-            integral_val += (lower_bound(x_low, p) - lower_bound(x1, p))
+            integral_val += (rzi_lower_bound(x_low, p) - rzi_lower_bound(x1, p))
         end
 
         # set x1 to the lower bound of the integration domain
@@ -249,16 +116,12 @@ function rzi(x1, x2, p, luts; lut_lim=[1.4e-3, 1e7])
 
     if x2 > x_high
         # use the upper bound approximation and add to integral value
-        integral_val += upper_bound(x2, p) - upper_bound(x_high, p)
+        integral_val += rzi_upper_bound(x2, p) - rzi_upper_bound(x_high, p)
 
         # set x2 to the upper bound of the integration domain
         x2 = x_high
 
     end
-
-    println(x1)
-    println(x2)
-    println(p)
 
     # use lut to get the value of the integral between x1 and x2 and add to integral value
     integral_val += (lut(x2) - lut(x1))
@@ -266,11 +129,6 @@ function rzi(x1, x2, p, luts; lut_lim=[1.4e-3, 1e7])
     return integral_val
     
 end
-
-# # define x1 and x2 for the Bose-Einstein integral
-# x1 = k*T/((e_b - mu))
-# # x1 = 0
-# x2 = k*T/((e_a - mu))
 
 function bei(; x1, x2, mu, T, luts, order)
     # function returns the value of the Bose-Einstein distribution integral
@@ -313,8 +171,3 @@ function bei(; x1, x2, mu, T, luts, order)
     return bei_val
 
 end
-
-bei_val = bei(x1=0, x2=0.03, mu=0, T=300, luts=luts, order=2)
-
-# display(fig)
-
