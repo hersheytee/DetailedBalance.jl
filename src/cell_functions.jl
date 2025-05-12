@@ -1,4 +1,6 @@
-function detailed_balance(; spectrum_file, T, E=-1)
+using Pkg, CSV, DataFrames, GLMakie, Trapz, Interpolations, Roots, ProgressBars
+
+function detailed_balance(; spectrum_file, T, E=-1, num_voltages=100)
 
     # load the spectrum
     spectrum = CSV.read(spectrum_file, DataFrame)
@@ -51,15 +53,15 @@ function detailed_balance(; spectrum_file, T, E=-1)
     # if E is not defined, use the data from the spectrum
     if E == -1
         E = E_data
+    else
+        # convert E to Joules
+        E = E*qe
     end
 
     ### Emitted photon flux using Incomplete Riemann-Zeta Integral ###
 
     # generate lookup tables
     luts = rzi_lut(lut_lim=[1.4e-3, 1e7])
-
-    # number of voltages to iterate over
-    num_voltages = 100
 
     # create an array to store voltages, currents, and power
     V_range = []

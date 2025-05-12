@@ -174,6 +174,10 @@ end
 
 function IV(; mu, E, T, luts, a_flux_data_func)
 
+    # define constants
+    k = 1.380649e-23 # Boltzmann's constant
+    h = 6.62607015e-34 # Planck's constant
+    c = 299792458 # Speed of light
     qe = 1.602176634e-19 # Electron charge
 
     # get absorbed photon flux
