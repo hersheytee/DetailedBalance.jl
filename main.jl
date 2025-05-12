@@ -1,4 +1,4 @@
-using Pkg, CSV, DataFrames, GLMakie, Trapz, Interpolations, Roots, ProgressBars, Optim
+using Pkg, CSV, DataFrames, GLMakie, Trapz, Interpolations, Roots, ProgressBars
 
 
 include("irzi_functions.jl")
@@ -228,8 +228,6 @@ function detailed_balance(; spectrum_file, T, E=-1)
         J_sc, _ = IV(mu=0, E=E[i], T=T, luts=luts, a_flux_data_func=a_flux_data_func)
         push!(J_sc_range, J_sc)
 
-        
-
         # check that J_sc > 0
         if J_sc < 0
             V_oc = NaN
@@ -243,7 +241,6 @@ function detailed_balance(; spectrum_file, T, E=-1)
 
             # get the maximum power point
             J_P_max, _, P_max = IV(mu=V_P_max*qe, E=E[i], T=T, luts=luts, a_flux_data_func=a_flux_data_func)
-
             
         end
 

@@ -202,6 +202,7 @@ end
 
 function d_power(; mu, E, T, luts, a_flux_data_func)
     # function returns the power derivative with respect to voltage using the central difference method
+    # function is used for finding the maximum power point
     # mu is the chemical potential
     # E is the photon energy
     # T is the temperature in K
