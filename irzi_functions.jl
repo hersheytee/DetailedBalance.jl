@@ -171,3 +171,30 @@ function bei(; x1, x2, mu, T, luts, order)
     return bei_val
 
 end
+
+function IV(; mu, E, T, luts, a_flux_data_func)
+
+
+
+    qe = 1.602176634e-19 # Electron charge
+
+    # get absorbed photon flux
+    a_flux = a_flux_data_func(E)
+
+    # define x1 and x2 for the Bose-Einstein integral
+    x1 = 0 # x1 = k*T/((e_b - mu)) and it is assumed e_b is infinity
+    x2 = k*T/((E - mu)) # e_a is bandgap
+
+    # emitted photon flux
+    e_flux = bei(x1=x1, x2=x2, mu=mu, T=T, luts=luts, order=2)
+
+    # get voltage
+    V = mu/qe
+
+    # get current
+    J = qe*(a_flux - e_flux)
+
+    # return current and voltage
+    return J, V
+
+end

@@ -162,13 +162,11 @@ function detailed_balance(; spectrum_file, E=-1, T=300)
 
     # interpolate absorbed flux for bandgaps defined
 
+    a_flux_data_func = linear_interpolation(E_data, a_flux_data)
+
     # if E is not defined, use the data from the spectrum
     if E == -1
         E = E_data
-        a_flux = a_flux_data
-    else
-        a_flux_data_func = linear_interpolation(E_data, a_flux_data)
-        a_flux = a_flux_data_func(E)
     end
 
     ### Emitted photon flux using Incomplete Riemann-Zeta Integral ###
@@ -182,76 +180,76 @@ function detailed_balance(; spectrum_file, E=-1, T=300)
     # Create the emitted flux array
     e_flux = Inf*ones(length(E), num_voltages)
 
+
     # create an array to store voltages
     V_range = []
 
+    # create an array to store currents
+    J_range = []
+
+    ### generate IV curve data ###
+
     for i in eachindex(E)
 
-        # 1000 steps for all voltages up to the current photon energy - 0.001 to avoid 0 error
-        V = range(0, E[i]-0.001*qe, length=num_voltages)
+        # 1000 steps for all chemical potentials up to the current photon energy - 0.001 eV to avoid 0 error
+        mu = range(0, E[i]-0.001*qe, length=num_voltages)
 
-        # store voltages in the array
-        V_range = push!(V_range, V)
+        # set up arrays to store IV curves
+        J = zeros(num_voltages)
+        V = zeros(num_voltages)
 
         # iterate through voltages to get emitted flux values for each bandgap and cell voltages
-        for j in eachindex(V)
+        for j in eachindex(mu)
 
-            # define x1 and x2 for the Bose-Einstein integral
-            x1 = 0 # x1 = k*T/((e_b - V)) and it is assumed e_b is infinity
-            x2 = k*T/((E[i] - V[j])) # e_a is bandgap
-
-            # emitted photon flux
-            try
-                e_flux[i,j] = bei(x1=x1, x2=x2, mu=V[j], T=T, luts=luts, order=2)
-            catch
-                #println("Error at i = $i, j = $j")
-                #println("x1 = $x1, x2 = $x2, mu = $(V[j]), T = $T")
-                break
-            end
+            J[j], V[j] = IV(mu=mu[j], E=E[i], T=T, luts=luts, a_flux_data_func=a_flux_data_func)
 
         end
 
+        # store voltage and current ranges
+        V_range = push!(V_range, V)
+        J_range = push!(J_range, J)
+
     end
+
+    # store in dictionary
+    IV_curves = Dict("J" => J_range, "V" => V_range)
+    
+    ### generate V_oc, J_sc, P_max, and eff data ###
 
     # set up array to store parameters for each bandgap
     V_oc_range = []
-    J_range = []
     J_sc_range = []
     P_max_range = []
 
-    # go through every bandgap and get currents
-
-    for i in tqdm(eachindex(E))
-
-        # get the voltage range
-        V = V_range[i]
-
-        # get current for each voltage
-        J = qe*(a_flux[i] .- e_flux[i, :])
-
-        # store the current in the array
-        push!(J_range, J)
-
-        # println("J = $J", "V = $V")
-
-        # # find the open circuit voltage
-
-        # # store the open circuit voltage
-        # V_oc_range = V[end]
+    for i in eachindex(E)
 
         # find and store the short circuit current
-        J_sc = J[1]
+        J_sc, _ = IV(mu=0, E=E[i], T=T, luts=luts, a_flux_data_func=a_flux_data_func)
         push!(J_sc_range, J_sc)
 
-        # find and store the maximum power points
-        p_max = maximum(J.*V/qe)
-        push!(P_max_range, p_max)
+        # get the open cicruit voltage using the roots function and store
+
+        # check that J_sc > 0
+        if J_sc < 0
+            V_oc = NaN
+        else
+            V_oc = find_zero(mu -> IV(mu=mu, E=E[i], T=T, luts=luts, a_flux_data_func=a_flux_data_func)[1], (0, E[i]-0.001*qe))/qe
+        end
+
+        push!(V_oc_range, V_oc)
+
+        # # find and store the maximum power points
+        # p_max = maximum(J.*V/qe)
+        # push!(P_max_range, p_max)
         # lines!(ax6, V/qe, J)
-        
+    
     end
 
+    # store in dictionary
+    IV_parameters = Dict("V_oc" => V_oc_range, "J_sc" => J_sc_range, "P_max" => P_max_range)
+
     # create tuple holding outputs
-    outputs = (a_flux, e_flux, E, V_range, J_range, J_sc_range, P_max_range, p_total)
+    outputs = (a_flux, e_flux, E, IV_curves, IV_parameters, p_total)
 
     return outputs, fig
 
@@ -263,16 +261,14 @@ a_flux = outputs[1]
 e_flux = outputs[2]
 
 E = outputs[3]/qe
-V_range = outputs[4]
-J_range = outputs[5]
-J_sc_range = outputs[6]
-P_max_range = outputs[7]
-p_total = outputs[8]
-
+IV_curves = outputs[4]
+IV_parameters = outputs[5]
+p_total = outputs[6]
+;
 
 fig = Figure()
 ax1 = Axis(fig[1, 1], limits=(0, nothing, 0, 1000), xlabel = "Voltage (V)", ylabel = "Current (A)")
-scatter!(ax1, V_range[1000]/qe, V_range[1000]/qe.*J_range[1000], color = :blue)
+lines!(ax1, V_range[500]/qe, V_range[500]/qe.*J_range[500], color = :blue)
 ;
 fig
 #integral_val = rzi(0, 0.05, 1, luts)
