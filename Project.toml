@@ -3,7 +3,25 @@ uuid = "d1edd98f-08f7-4164-b17e-431bffdb440b"
 authors = ["Harsh Talathi"]
 version = "1.0.0-DEV"
 
+[deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
+Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+ProgressBars = "49802e3a-d2f1-5c88-81d8-b72133a6f568"
+Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
+Trapz = "592b5752-818d-11e9-1e9a-2b8ca4a44cd1"
+
 [compat]
+CSV = "0.10.15"
+DataFrames = "1.7.0"
+GLMakie = "0.11.5"
+Interpolations = "0.15.1"
+Pkg = "1.11.0"
+ProgressBars = "1.5.1"
+Roots = "2.2.7"
+Trapz = "2.0.3"
 julia = "1.6.7"
 
 [extras]
