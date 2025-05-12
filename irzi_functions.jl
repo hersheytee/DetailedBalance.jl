@@ -44,7 +44,7 @@ function rzi_lut(; lut_lim=[1.4e-3, 1e7], num=5000)
         val = cumtrapz_int(x, integrand)
         
         # return lookup table as interpolations function 
-        lut = linear_interpolation(x, val, extrapolation_bc=Flat())
+        lut = linear_interpolation(x, val, extrapolation_bc=Interpolations.Flat())
 
         # TODO: see if this is the fastest way
         push!(luts, lut)
@@ -174,8 +174,6 @@ end
 
 function IV(; mu, E, T, luts, a_flux_data_func)
 
-
-
     qe = 1.602176634e-19 # Electron charge
 
     # get absorbed photon flux
@@ -194,7 +192,31 @@ function IV(; mu, E, T, luts, a_flux_data_func)
     # get current
     J = qe*(a_flux - e_flux)
 
-    # return current and voltage
-    return J, V
+    # get power
+    P = J*V
+
+    # return current and voltage and power
+    return J, V, P
+
+end
+
+function d_power(; mu, E, T, luts, a_flux_data_func)
+    # function returns the power derivative with respect to voltage using the central difference method
+    # mu is the chemical potential
+    # E is the photon energy
+    # T is the temperature in K
+    # luts is the look-up tables for the Incomplete Riemann-Zeta integral created by the rzi_lut function
+    # a_flux_data_func is a function that returns the absorbed photon flux
+
+    d_tol = 1e-3*mu # tolerance for the central difference method
+
+    # get the power at mu + d_tol
+    P_plus = IV(mu=mu+d_tol, E=E, T=T, luts=luts, a_flux_data_func=a_flux_data_func)[3]
+    # get the power at mu - d_tol
+    P_minus = IV(mu=mu-d_tol, E=E, T=T, luts=luts, a_flux_data_func=a_flux_data_func)[3]
+
+    d_power = (P_plus - P_minus)/(2*d_tol)
+
+    return d_power
 
 end

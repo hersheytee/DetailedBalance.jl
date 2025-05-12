@@ -1,4 +1,4 @@
-using Pkg, CSV, DataFrames, GLMakie, Trapz, Interpolations, Roots, ProgressBars
+using Pkg, CSV, DataFrames, GLMakie, Trapz, Interpolations, Roots, ProgressBars, Optim
 
 
 include("irzi_functions.jl")
@@ -99,7 +99,7 @@ qe = 1.602176634e-19 # Electron charge
 # end
 
 
-function detailed_balance(; spectrum_file, E=-1, T=300)
+function detailed_balance(; spectrum_file, T, E=-1)
 
     # load the spectrum
     spectrum = CSV.read(spectrum_file, DataFrame)
@@ -181,11 +181,10 @@ function detailed_balance(; spectrum_file, E=-1, T=300)
     e_flux = Inf*ones(length(E), num_voltages)
 
 
-    # create an array to store voltages
+    # create an array to store voltages, currents, and power
     V_range = []
-
-    # create an array to store currents
     J_range = []
+    P_range = []
 
     ### generate IV curve data ###
 
@@ -197,22 +196,24 @@ function detailed_balance(; spectrum_file, E=-1, T=300)
         # set up arrays to store IV curves
         J = zeros(num_voltages)
         V = zeros(num_voltages)
+        P = zeros(num_voltages)
 
-        # iterate through voltages to get emitted flux values for each bandgap and cell voltages
+        # iterate through voltages to get IV curve
         for j in eachindex(mu)
 
-            J[j], V[j] = IV(mu=mu[j], E=E[i], T=T, luts=luts, a_flux_data_func=a_flux_data_func)
+            J[j], V[j], P[j] = IV(mu=mu[j], E=E[i], T=T, luts=luts, a_flux_data_func=a_flux_data_func)
 
         end
 
-        # store voltage and current ranges
+        # store voltage, current, and power ranges
         V_range = push!(V_range, V)
         J_range = push!(J_range, J)
+        P_range = push!(P_range, P)
 
     end
 
     # store in dictionary
-    IV_curves = Dict("J" => J_range, "V" => V_range)
+    IV_curves = Dict("J" => J_range, "V" => V_range, "P" => P_range)
     
     ### generate V_oc, J_sc, P_max, and eff data ###
 
@@ -221,54 +222,60 @@ function detailed_balance(; spectrum_file, E=-1, T=300)
     J_sc_range = []
     P_max_range = []
 
-    for i in eachindex(E)
+    for i in tqdm(eachindex(E))
 
         # find and store the short circuit current
         J_sc, _ = IV(mu=0, E=E[i], T=T, luts=luts, a_flux_data_func=a_flux_data_func)
         push!(J_sc_range, J_sc)
 
-        # get the open cicruit voltage using the roots function and store
+        
 
         # check that J_sc > 0
         if J_sc < 0
             V_oc = NaN
+            P_max = NaN
         else
+            # get the open cicruit voltage using the roots function and store
             V_oc = find_zero(mu -> IV(mu=mu, E=E[i], T=T, luts=luts, a_flux_data_func=a_flux_data_func)[1], (0, E[i]-0.001*qe))/qe
+
+            # find the voltage at maximum power point
+            V_P_max = find_zero(mu -> d_power(mu=mu, E=E[i], T=T, luts=luts, a_flux_data_func=a_flux_data_func), (V_oc*qe/3, V_oc*qe))/qe
+
+            # get the maximum power point
+            J_P_max, _, P_max = IV(mu=V_P_max*qe, E=E[i], T=T, luts=luts, a_flux_data_func=a_flux_data_func)
+
+            
         end
 
-        push!(V_oc_range, V_oc)
-
-        # # find and store the maximum power points
-        # p_max = maximum(J.*V/qe)
-        # push!(P_max_range, p_max)
-        # lines!(ax6, V/qe, J)
+        push!(V_oc_range, V_oc)        
+        push!(P_max_range, P_max)
     
     end
 
     # store in dictionary
-    IV_parameters = Dict("V_oc" => V_oc_range, "J_sc" => J_sc_range, "P_max" => P_max_range)
+    IV_parameters = Dict("V_oc" => V_oc_range, "J_sc" => J_sc_range, "P_max" => P_max_range, "eff" => P_max_range/p_total)
 
     # create tuple holding outputs
-    outputs = (a_flux, e_flux, E, IV_curves, IV_parameters, p_total)
+    outputs = (E, IV_curves, IV_parameters, p_total)
 
     return outputs, fig
 
 end
 
-outputs, figure = detailed_balance(spectrum_file = "am0.csv", T=300)
+outputs, figure = detailed_balance(spectrum_file = "am0.csv", T=298.15)
 
-a_flux = outputs[1]
-e_flux = outputs[2]
 
-E = outputs[3]/qe
-IV_curves = outputs[4]
-IV_parameters = outputs[5]
-p_total = outputs[6]
+E = outputs[1]/qe
+
+IV_curves = outputs[2]
+IV_parameters = outputs[3]
+p_total = outputs[4]
 ;
 
 fig = Figure()
-ax1 = Axis(fig[1, 1], limits=(0, nothing, 0, 1000), xlabel = "Voltage (V)", ylabel = "Current (A)")
-lines!(ax1, V_range[500]/qe, V_range[500]/qe.*J_range[500], color = :blue)
+ax1 = Axis(fig[1, 1], limits=(0, nothing, 0, nothing))
+lines!(ax1, E, IV_parameters["eff"])
+
 ;
 fig
 #integral_val = rzi(0, 0.05, 1, luts)
