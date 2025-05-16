@@ -1,5 +1,5 @@
 # import the packages we need
-using DetailedBalance, GLMakie
+using DetailedBalance, CairoMakie
 
 # define the bandgaps we want to calculate the detailed balance for (in eV)
 bandgaps = 0.5:0.1:2.5

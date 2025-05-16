@@ -1,5 +1,3 @@
-using Pkg, CSV, DataFrames, GLMakie, Trapz, Interpolations, Roots, ProgressBars
-
 function detailed_balance(; spectrum_file, T, E=-1, num_voltages=100)
 
     # load the spectrum

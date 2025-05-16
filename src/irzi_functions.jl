@@ -1,5 +1,3 @@
-using Pkg, CSV, DataFrames, GLMakie, Trapz, Interpolations
-
 function cumtrapz_int(x,y)
     # cumulative trapezoidal integration
     # input: 
