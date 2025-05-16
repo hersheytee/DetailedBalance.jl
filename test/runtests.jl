@@ -4,7 +4,7 @@ using Test
 @testset "DetailedBalance.jl" begin
     # Test the detailed_balance_fluxes function
     # Define the path to the spectrum file
-    spectrum_file = "src/am0.csv"
+    spectrum_file = joinpath(@__DIR__, "data", "am0.csv")
     
     # Call the function with the test spectrum file and a temperature of 300 K
     outputs = detailed_balance(spectrum_file=spectrum_file, T=300)
