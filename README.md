@@ -6,7 +6,7 @@ The DetailedBalance.jl package aims to provide a set of functions for fast and e
 
 Currently the package can calculate the IV curve for a single-junction solar cell given a specified spectrum file, solar cell temperature, and bandgap or set of bandgaps. See example.jl in src for more.
 
-This package is a work in progress, some of the things in the (very short-termm) pipeline include:
+This package is a work in progress, some of the things in the (very short-term) pipeline include:
 * an expansive suite of unit tests
 * extensive documentation
 * performance improvements
