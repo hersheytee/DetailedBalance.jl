@@ -1,7 +1,7 @@
 using Pkg, CSV, DataFrames, GLMakie, Trapz, Interpolations, Roots, ProgressBars
 
 
-include("irzi_functions.jl")
+include("src/irzi_functions.jl")
 
 # define constants
 k = 1.380649e-23 # Boltzmann's constant
