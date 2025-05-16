@@ -1,0 +1,4 @@
+[deps]
+DetailedBalance = "d1edd98f-08f7-4164-b17e-431bffdb440b"
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
