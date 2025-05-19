@@ -1,5 +1,11 @@
-# import the packages we need
-using DetailedBalance, CairoMakie
+# import the DetailedBalance package from the src folder
+using Pkg
+Pkg.activate(joinpath(@__DIR__, ".."))  # activate main package env
+
+using DetailedBalance
+
+# note, you need to install these packages if you haven't already by using the Julia package manager
+using DetailedBalance, GLMakie
 
 # define the bandgaps we want to calculate the detailed balance for (in eV)
 bandgaps = 0.5:0.1:2.5
@@ -8,7 +14,7 @@ bandgaps = 0.5:0.1:2.5
 T = 300
 
 # define the spectrum file (see the included spectrum files in the src folder for the format if you want to create your own)
-spectrum_file = "src/am0.csv"
+spectrum_file = "data/am0.csv"
 
 # call the detailed balance function
 outputs = detailed_balance(spectrum_file=spectrum_file, T=T, E=bandgaps)
