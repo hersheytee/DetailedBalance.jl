@@ -15,7 +15,7 @@ Trapz = "592b5752-818d-11e9-1e9a-2b8ca4a44cd1"
 
 [compat]
 CSV = "0.10.15"
-CairoMakie = "0.13.5"
+CairoMakie = "0.13.5, 0.14"
 DataFrames = "1.7.0"
 Interpolations = "0.15.1"
 Pkg = "1.11.0"
